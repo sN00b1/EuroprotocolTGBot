@@ -13,9 +13,9 @@ type Bot struct {
 }
 
 func NewBot(apiTocken string, mode bool) (*Bot, error) {
-	bot, err := tgbotapi.NewBotAPI("YOUR_TELEGRAM_BOT_API_TOKEN")
+	bot, err := tgbotapi.NewBotAPI(apiTocken)
 	if err != nil {
-		loggin.Log.Panic(err.Error())
+		loggin.Log.Error(err.Error())
 		return nil, err
 	}
 
@@ -28,7 +28,6 @@ func NewBot(apiTocken string, mode bool) (*Bot, error) {
 }
 
 func (bot *Bot) Run() {
-
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
