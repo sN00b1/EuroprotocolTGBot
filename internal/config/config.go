@@ -1,11 +1,9 @@
 package config
 
 import (
-	"EuroprotocolTGBot/internal/loggin"
 	"flag"
+	"log"
 	"os"
-
-	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -24,7 +22,7 @@ func NewConffig() Config {
 		args = args + string(" ") + v
 	}
 
-	loggin.Log.Debug("os: ", zap.String("args: ", args))
+	log.Println("os args: ", args)
 
 	return Config{
 		Key:  *key,

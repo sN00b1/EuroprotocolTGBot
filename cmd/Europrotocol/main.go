@@ -14,10 +14,10 @@ func main() {
 		panic("Error while zap initialize.")
 	}
 
-	botObj, err := bot.NewBot(config.Key, config.Mode != "Release")
+	bot, err := bot.NewBot(config.Key, config.Mode != "Release")
 	if err != nil {
 		panic("Error while bot initialize.")
 	}
 
-	botObj.Run()
+	bot.Run()
 }
