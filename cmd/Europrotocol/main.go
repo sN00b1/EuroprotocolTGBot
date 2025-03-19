@@ -7,14 +7,14 @@ import (
 )
 
 func main() {
-	config := config.NewConffig()
+	config := config.NewConfig()
 
 	err := loggin.Initialize(config.Mode)
 	if err != nil {
 		panic("Error while zap initialize.")
 	}
 
-	bot, err := bot.NewBot(config.Key, config.Mode != "Release")
+	bot, err := bot.NewBot(config)
 	if err != nil {
 		panic("Error while bot initialize.")
 	}
