@@ -1,29 +1,38 @@
 package bot
 
 import (
+	"EuroprotocolTGBot/internal/config"
 	"EuroprotocolTGBot/internal/loggin"
-	"log"
+	"EuroprotocolTGBot/internal/tools"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.uber.org/zap"
 )
 
 type Bot struct {
-	Bot *tgbotapi.BotAPI
+	Bot   *tgbotapi.BotAPI
+	cfg   config.Config
+	chain tools.MsgChain
 }
 
-func NewBot(apiTocken string, mode bool) (*Bot, error) {
-	bot, err := tgbotapi.NewBotAPI(apiTocken)
+func NewBot(cfg config.Config) (*Bot, error) {
+	bot, err := tgbotapi.NewBotAPI(cfg.Key)
 	if err != nil {
 		loggin.Log.Error(err.Error())
 		return nil, err
 	}
 
-	bot.Debug = mode
+	bot.Debug = (cfg.Mode != "Release")
+
+	chain := tools.NewMsgChain()
+	chain.LoadAsks(cfg.ConfigFile)
 
 	loggin.Log.Debug("NewBot:", zap.String("Authorized on account %s", bot.Self.UserName))
+
 	return &Bot{
-		Bot: bot,
+		Bot:   bot,
+		cfg:   cfg,
+		chain: *chain,
 	}, nil
 }
 
@@ -35,9 +44,43 @@ func (bot *Bot) Run() {
 
 	for update := range updates {
 		if update.Message != nil {
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+			loggin.Log.Debug("", zap.String("User: ", update.Message.From.UserName+" Message: "+update.Message.Text))
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			var msg tgbotapi.MessageConfig
+			switch update.Message.Text {
+			case "/start":
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Привет! Я ваш Telegram-бот по заполнению европротоклов при ДТП. Напишите /help для просмотра всех команд.")
+			case "/help":
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID,
+					`Я могу помочь с основными вопросами. 
+				Напишите /new для создания нового протокола, 
+				/list для ппросмотра списка своих протоколов,
+				/new_on для создания протокола на основе существующего протокола,
+				/edit для редактирования проткола из списка .`)
+			case "/new":
+				bot.chain.Reset()
+				ask, _ := bot.chain.GetCurrentAsk()
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+			case "/list":
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
+			case "/new_on":
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
+			case "/edit":
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
+			default:
+				if bot.chain.Start {
+					bot.chain.SetCurrentAnswer(update.Message.Text)
+					ask, ok := bot.chain.GetCurrentAsk()
+					if ok {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+					} else {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Заполнение протокола завершено. Можете его распечатать командой /print.")
+					}
+				} else {
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваше сообщение не ясно. Воспользуйтесь /help.")
+				}
+			}
+
 			bot.Bot.Send(msg)
 		}
 	}

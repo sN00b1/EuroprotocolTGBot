@@ -7,13 +7,15 @@ import (
 )
 
 type Config struct {
-	Key  string
-	Mode string
+	Key        string
+	Mode       string
+	ConfigFile string
 }
 
-func NewConffig() Config {
+func NewConfig() Config {
 	key := flag.String("k", "", "Telegram API token")
 	mode := flag.String("m", "Debug", "Mode for loggin. Should be Zap like debug mode")
+	cf := flag.String("f", "Asks.json", "Name of config file with answers in json format")
 	flag.Parse()
 
 	var args string
@@ -25,7 +27,8 @@ func NewConffig() Config {
 	log.Println("os args: ", args)
 
 	return Config{
-		Key:  *key,
-		Mode: *mode,
+		Key:        *key,
+		Mode:       *mode,
+		ConfigFile: *cf,
 	}
 }
