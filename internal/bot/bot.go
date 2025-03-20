@@ -3,6 +3,7 @@ package bot
 import (
 	"EuroprotocolTGBot/internal/config"
 	"EuroprotocolTGBot/internal/loggin"
+	"EuroprotocolTGBot/internal/storage"
 	"EuroprotocolTGBot/internal/tools"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -13,6 +14,7 @@ type Bot struct {
 	Bot   *tgbotapi.BotAPI
 	cfg   config.Config
 	chain tools.MsgChain
+	db    *storage.DBStorage
 }
 
 func NewBot(cfg config.Config) (*Bot, error) {
@@ -29,10 +31,22 @@ func NewBot(cfg config.Config) (*Bot, error) {
 
 	loggin.Log.Debug("NewBot:", zap.String("Authorized on account %s", bot.Self.UserName))
 
+	db, err := storage.NewDBStorage(cfg.DBConfig)
+	if err != nil {
+		loggin.Log.Error("NewDBStorage:", zap.String("Database creation fail: ", err.Error()))
+		return &Bot{
+			Bot:   bot,
+			cfg:   cfg,
+			chain: *chain,
+			db:    db,
+		}, err
+	}
+
 	return &Bot{
 		Bot:   bot,
 		cfg:   cfg,
 		chain: *chain,
+		db:    db,
 	}, nil
 }
 

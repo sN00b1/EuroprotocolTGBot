@@ -1,6 +1,7 @@
 package config
 
 import (
+	"EuroprotocolTGBot/internal/storage"
 	"flag"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ type Config struct {
 	Key        string
 	Mode       string
 	ConfigFile string
+	DBConfig   storage.DBConfig
 }
 
 func NewConfig() Config {
