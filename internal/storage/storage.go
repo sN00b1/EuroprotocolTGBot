@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	"go.uber.org/zap"
 )
 
@@ -47,7 +49,7 @@ func createConnectionPool(config DBConfig) *sql.DB {
 	// Создаем пул подключений
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
-		loggin.Log.Fatal("Ошибка при открытии соединения: ", zap.String("DBError", err.Error()))
+		loggin.Log.Error("Ошибка при открытии соединения: ", zap.String("DBError", err.Error()))
 	}
 
 	// Настраиваем параметры пула
@@ -58,7 +60,7 @@ func createConnectionPool(config DBConfig) *sql.DB {
 	// Проверяем подключение
 	err = db.Ping()
 	if err != nil {
-		loggin.Log.Fatal("Ошибка при проверке подключения: ", zap.String("DBError", err.Error()))
+		loggin.Log.Error("Ошибка при проверке подключения: ", zap.String("DBError", err.Error()))
 	}
 
 	return db
@@ -75,22 +77,13 @@ type DBStorage struct {
 func NewDBStorage(cfg DBConfig) (*DBStorage, error) {
 	db := createConnectionPool(cfg)
 
-	err := db.Ping()
-	if err != nil {
-		return &DBStorage{
-			DB:        nil,
-			IsActive:  false,
-			Semaphore: make(chan struct{}, cfg.MaxOpenCons),
-		}, err
-	}
-
 	dbStorage := &DBStorage{
 		DB:        db,
 		IsActive:  true,
 		Semaphore: make(chan struct{}, cfg.MaxOpenCons),
 	}
 
-	err = dbStorage.createDBStruct()
+	err := dbStorage.createDBStruct()
 	if err != nil {
 		return nil, err
 	}
@@ -172,19 +165,11 @@ func (db *DBStorage) createDBStruct() error {
 	"own_move" boolean NOT NULL,
 	"note" bigint NOT NULL,
 	PRIMARY KEY ("id")
-	);
-
-	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk0" FOREIGN KEY ("id") REFERENCES "Car"("incident_id");
-	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk1" FOREIGN KEY ("car_a_id") REFERENCES "Car"("id");
-	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk2" FOREIGN KEY ("car_b_id") REFERENCES "Car"("id");
-	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk3" FOREIGN KEY ("car_a_obs_id") REFERENCES "Case"("id");
-	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk4" FOREIGN KEY ("car_b_obs_id") REFERENCES "Case"("id");
-	ALTER TABLE "Owner" ADD CONSTRAINT "Owner_fk0" FOREIGN KEY ("id") REFERENCES "Car"("owner_id");
-	ALTER TABLE "Driver" ADD CONSTRAINT "Driver_fk0" FOREIGN KEY ("id") REFERENCES "Car"("driver_id");`
+	);`
 
 	_, err := db.DB.Exec(createQuery)
 	if err != nil {
-		loggin.Log.Debug("err:", zap.String("err:", err.Error()))
+		loggin.Log.Error("createDBStruct err:", zap.String("err:", err.Error()))
 		return err
 	}
 

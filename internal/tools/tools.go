@@ -24,8 +24,8 @@ type MsgChain struct {
 }
 
 // функция создания новой цепочки
-func NewMsgChain() *MsgChain {
-	return &MsgChain{
+func NewMsgChain() MsgChain {
+	return MsgChain{
 		AnswerList: make(map[int]TextWithID),
 		AskList:    make(map[int]TextWithID),
 		CurrID:     1,
