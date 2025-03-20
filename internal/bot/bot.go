@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// структура бота
 type Bot struct {
 	Bot   *tgbotapi.BotAPI
 	cfg   config.Config
@@ -17,7 +18,9 @@ type Bot struct {
 	db    *storage.DBStorage
 }
 
+// функция создания нового бота
 func NewBot(cfg config.Config) (*Bot, error) {
+	// подключаемся к апи телеграмма
 	bot, err := tgbotapi.NewBotAPI(cfg.Key)
 	if err != nil {
 		loggin.Log.Error(err.Error())
@@ -26,11 +29,13 @@ func NewBot(cfg config.Config) (*Bot, error) {
 
 	bot.Debug = (cfg.Mode != "Release")
 
+	// получаем цепочку сообщений для опроса и создания европротокола
 	chain := tools.NewMsgChain()
 	chain.LoadAsks(cfg.ConfigFile)
 
 	loggin.Log.Debug("NewBot:", zap.String("Authorized on account %s", bot.Self.UserName))
 
+	// создаем БД
 	db, err := storage.NewDBStorage(cfg.DBConfig)
 	if err != nil {
 		loggin.Log.Error("NewDBStorage:", zap.String("Database creation fail: ", err.Error()))
@@ -50,6 +55,7 @@ func NewBot(cfg config.Config) (*Bot, error) {
 	}, nil
 }
 
+// функция запуска бота
 func (bot *Bot) Run() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// структура конфигурации бота
 type Config struct {
 	Key        string
 	Mode       string
@@ -14,6 +15,7 @@ type Config struct {
 	DBConfig   storage.DBConfig
 }
 
+// получение конфигурации из параметров командной строки
 func NewConfig() Config {
 	key := flag.String("k", "", "Telegram API token")
 	mode := flag.String("m", "Debug", "Mode for loggin. Should be Zap like debug mode")

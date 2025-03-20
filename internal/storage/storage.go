@@ -64,12 +64,14 @@ func createConnectionPool(config DBConfig) *sql.DB {
 	return db
 }
 
+// структура воркера БД с семафором на подключения
 type DBStorage struct {
 	DB        *sql.DB
 	IsActive  bool
 	Semaphore chan struct{}
 }
 
+// создатель нового воркера БД
 func NewDBStorage(cfg DBConfig) (*DBStorage, error) {
 	db := createConnectionPool(cfg)
 
@@ -96,11 +98,13 @@ func NewDBStorage(cfg DBConfig) (*DBStorage, error) {
 	return dbStorage, err
 }
 
+// фукнкция закрытия БД
 func (db *DBStorage) Close() {
 	db.DB.Close()
 	db.IsActive = false
 }
 
+// функция создания структуры базы данных
 func (db *DBStorage) createDBStruct() error {
 	createQuery := `
 	CREATE TABLE IF NOT EXISTS "Car" (

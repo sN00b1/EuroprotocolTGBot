@@ -9,11 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// структура текста с номером для хранения вопросов и ответов в бот
 type TextWithID struct {
 	ID   int    `json:"id"`
 	Text string `json:"text"`
 }
 
+// структура цепочки вопросов и ответов
 type MsgChain struct {
 	AnswerList map[int]TextWithID
 	AskList    map[int]TextWithID
@@ -21,6 +23,7 @@ type MsgChain struct {
 	Start      bool
 }
 
+// функция создания новой цепочки
 func NewMsgChain() *MsgChain {
 	return &MsgChain{
 		AnswerList: make(map[int]TextWithID),
@@ -30,6 +33,7 @@ func NewMsgChain() *MsgChain {
 	}
 }
 
+// функуция загрузки вопросов из файла конфигурации бота
 func (chain *MsgChain) LoadAsks(file string) error {
 	content, err := os.ReadFile(file)
 	if err != nil {
@@ -55,6 +59,7 @@ func (chain *MsgChain) LoadAsks(file string) error {
 	return nil
 }
 
+// функция получения текущего вопроса при сквозном опросе
 func (chain *MsgChain) GetCurrentAsk() (TextWithID, bool) {
 	chain.Start = true
 	v, ok := chain.AskList[chain.CurrID]
@@ -62,6 +67,7 @@ func (chain *MsgChain) GetCurrentAsk() (TextWithID, bool) {
 	return v, ok
 }
 
+// функция сохранения ответа на текущий вопрос
 func (chain *MsgChain) SetCurrentAnswer(answer string) {
 	currAns := TextWithID{
 		ID:   chain.CurrID,
@@ -71,6 +77,7 @@ func (chain *MsgChain) SetCurrentAnswer(answer string) {
 	chain.CurrID++
 }
 
+// функция сброса ответов и текущей цепочки
 func (chain *MsgChain) Reset() {
 	chain.CurrID = 1
 	chain.Start = false
