@@ -20,6 +20,22 @@ type DBConfig struct {
 	MaxIdleCons int
 }
 
+// объект владельца автомобиля
+type Owner struct {
+}
+
+// объект водителя автомобиля
+type Driver struct {
+}
+
+// объект ДТП
+type Incedent struct {
+}
+
+// объект автомобиля
+type Car struct {
+}
+
 // Создаем пул подключений
 func createConnectionPool(config DBConfig) *sql.DB {
 	// Формируем строку подключения
@@ -87,65 +103,80 @@ func (db *DBStorage) Close() {
 
 func (db *DBStorage) createDBStruct() error {
 	createQuery := `
-		CREATE TABLE IF NOT EXISTS europrotocol (
-		id VARCHAR(255) PRIMARY KEY,
-		str1 TEXT,
-		str2 TEXT,
-		str3 TEXT,
-		str4 TEXT,
-		str5 TEXT,
-		str6 TEXT,
-		str7 TEXT,
-		str8 TEXT,
-		str9 TEXT,
-		str10 TEXT,
-		str11 TEXT,
-		str12 TEXT,
-		str13 TEXT,
-		str14 TEXT,
-		str15 TEXT,
-		str16 TEXT,
-		str17 TEXT,
-		str18 TEXT,
-		str19 TEXT,
-		str20 TEXT,
-		str21 TEXT,
-		str22 TEXT,
-		str23 TEXT,
-		str24 TEXT,
-		str25 TEXT,
-		str26 TEXT,
-		str27 TEXT,
-		str28 TEXT,
-		str29 TEXT,
-		str30 TEXT,
-		str31 TEXT,
-		str32 TEXT,
-		str33 TEXT,
-		str34 TEXT,
-		str35 TEXT,
-		str36 TEXT,
-		str37 TEXT,
-		str38 TEXT,
-		str39 TEXT,
-		str40 TEXT,
-		str41 TEXT,
-		str42 TEXT,
-		str43 TEXT,
-		str44 TEXT,
-		str45 TEXT,
-		str46 TEXT,
-		str47 TEXT,
-		str48 TEXT,
-		str49 TEXT,
-		str50 TEXT,
-		str51 TEXT,
-		str52 TEXT,
-		str53 TEXT,
-		str54 TEXT,
-		str55 TEXT,
-		str56 TEXT,
-		);`
+	CREATE TABLE IF NOT EXISTS "Car" (
+	"id" varchar(2000) NOT NULL UNIQUE,
+	"owner_id" varchar(2000) NOT NULL UNIQUE,
+	"driver_id" varchar(2000) NOT NULL UNIQUE,
+	"model" varchar(2000) NOT NULL,
+	"vin" varchar(2000) NOT NULL,
+	"srp" varchar(15) NOT NULL,
+	"cert" varchar(2000) NOT NULL,
+	"insurance" varchar(2000) NOT NULL,
+	"insurance_number" varchar(2000) NOT NULL,
+	"casco" varchar(2000) NOT NULL,
+	"damage" varchar(2000) NOT NULL,
+	"info" varchar(2000) NOT NULL,
+	PRIMARY KEY ("id")
+	);
+
+	CREATE TABLE IF NOT EXISTS "Incident" (
+	"id" serial NOT NULL UNIQUE,
+	"car_a_id" varchar(2000) NOT NULL,
+	"car_b_id" varchar(2000) NOT NULL,
+	"car_a_obs_id" varchar(2000) NOT NULL,
+	"car_b_obs_id" varchar(2000) NOT NULL,
+	"place" varchar(2000) NOT NULL,
+	"date" timestamp without time zone NOT NULL,
+	"cars_number" bigint NOT NULL DEFAULT '2',
+	"hurt_number" bigint NOT NULL,
+	"dead_number" bigint NOT NULL,
+	"alco_check" boolean NOT NULL,
+	"other_cars" boolean NOT NULL,
+	"other_property" boolean NOT NULL,
+	"witness" varchar(2000) NOT NULL,
+	"gai_work" boolean NOT NULL,
+	"gai_number" varchar(2000) NOT NULL,
+	"other_cars_info" varchar(2000) NOT NULL,
+	"damaged_property" varchar(2000) NOT NULL,
+	"dproperty_owner" varchar(2000) NOT NULL,
+	"new_field" bigint NOT NULL,
+	PRIMARY KEY ("id")
+	);
+
+	CREATE TABLE IF NOT EXISTS "Owner" (
+	"id" serial NOT NULL UNIQUE,
+	"name" varchar(2000) NOT NULL,
+	"adress" varchar(2000) NOT NULL,
+	PRIMARY KEY ("id")
+	);
+
+	CREATE TABLE IF NOT EXISTS "Driver" (
+	"id" serial NOT NULL UNIQUE,
+	"fio" varchar(2000) NOT NULL,
+	"birthday" timestamp without time zone NOT NULL,
+	"adress" varchar(2000) NOT NULL,
+	"phone" varchar(20) NOT NULL,
+	"certificate" varchar(2000) NOT NULL,
+	"way_doc" varchar(2000) NOT NULL,
+	PRIMARY KEY ("id")
+	);
+
+	CREATE TABLE IF NOT EXISTS "Case" (
+	"id" serial NOT NULL UNIQUE,
+	"fact" varchar(2000) NOT NULL,
+	"owner_drive" boolean NOT NULL,
+	"own_move" boolean NOT NULL,
+	"note" bigint NOT NULL,
+	PRIMARY KEY ("id")
+	);
+
+	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk0" FOREIGN KEY ("id") REFERENCES "Car"("incident_id");
+	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk1" FOREIGN KEY ("car_a_id") REFERENCES "Car"("id");
+	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk2" FOREIGN KEY ("car_b_id") REFERENCES "Car"("id");
+	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk3" FOREIGN KEY ("car_a_obs_id") REFERENCES "Case"("id");
+	ALTER TABLE "Incident" ADD CONSTRAINT "Incident_fk4" FOREIGN KEY ("car_b_obs_id") REFERENCES "Case"("id");
+	ALTER TABLE "Owner" ADD CONSTRAINT "Owner_fk0" FOREIGN KEY ("id") REFERENCES "Car"("owner_id");
+	ALTER TABLE "Driver" ADD CONSTRAINT "Driver_fk0" FOREIGN KEY ("id") REFERENCES "Car"("driver_id");`
 
 	_, err := db.DB.Exec(createQuery)
 	if err != nil {
@@ -154,4 +185,16 @@ func (db *DBStorage) createDBStruct() error {
 	}
 
 	return nil
+}
+
+// Вспомогательная функция для соединения строк
+func join(elements []string, separator string) string {
+	if len(elements) == 0 {
+		return ""
+	}
+	result := elements[0]
+	for _, s := range elements[1:] {
+		result += separator + s
+	}
+	return result
 }
