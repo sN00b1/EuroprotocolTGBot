@@ -23,7 +23,7 @@ func NewConfig() Config {
 	host := flag.String("dbh", "localhost", "IP adress of postgresql Database")
 	port := flag.String("dbp", "5432", "Port for postgresql databese connection")
 	user := flag.String("dbu", "postgres", "User for postgresql database")
-	pass := flag.String("dbpass", "sqlpwdusr", "Password for postgresql database")
+	pass := flag.String("dbpass", "eupwdusr", "Password for postgresql database")
 	name := flag.String("dbn", "europrotocol", "Database name for postgresql")
 	ocon := flag.Int("dbo", 300, "Maximum opened connections for postgresql database")
 	icon := flag.Int("dbi", 150, "Maximum idle connections for postgresql database")
