@@ -51,11 +51,6 @@ func (chain *MsgChain) LoadAsks(file string) error {
 		return err
 	}
 
-	for _, v := range texts {
-		chain.AskList[v.ID] = v
-		loggin.Log.Info("AskList", zap.String("ID: ", strconv.Itoa(v.ID)+" Text:"+v.Text))
-	}
-
 	return nil
 }
 
@@ -82,4 +77,36 @@ func (chain *MsgChain) Reset() {
 	chain.CurrID = 1
 	chain.Start = false
 	chain.AnswerList = make(map[int]TextWithID)
+}
+
+func (chain *MsgChain) PrintAnswer(filePath string) error {
+	// Создаем файл для записи
+	file, err := os.Create(filePath)
+	if err != nil {
+		loggin.Log.Error("PrintAnswer:", zap.String("Ошибка создания файла", err.Error()))
+		return err
+	}
+	defer file.Close()
+
+	// Конвертируем map в JSON
+	jsonData, err := json.MarshalIndent(chain.AnswerList, "", "    ")
+	if err != nil {
+		loggin.Log.Error("PrintAnswer:", zap.String("Ошибка сериализации данных ответов", err.Error()))
+		return err
+	}
+
+	// Записываем JSON в файл
+	_, err = file.Write(jsonData)
+	if err != nil {
+		loggin.Log.Error("PrintAnswer:", zap.String("Ошибка записи в файл", err.Error()))
+		return err
+	}
+
+	// Добавляем перевод строки в конец файла
+	_, err = file.WriteString("\n")
+	if err != nil {
+		loggin.Log.Error("PrintAnswer:", zap.String("Ошибка записи в файл", err.Error()))
+		return err
+	}
+	return nil
 }

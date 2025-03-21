@@ -13,6 +13,8 @@ type Config struct {
 	Mode       string
 	ConfigFile string
 	DBConfig   storage.DBConfig
+	ScriptPath string
+	BinPath    string
 }
 
 // получение конфигурации из параметров командной строки
@@ -27,6 +29,8 @@ func NewConfig() Config {
 	name := flag.String("dbn", "europrotocol", "Database name for postgresql")
 	ocon := flag.Int("dbo", 300, "Maximum opened connections for postgresql database")
 	icon := flag.Int("dbi", 150, "Maximum idle connections for postgresql database")
+	dpath := flag.String("sp", "~/git/europrotocoltgbot/python/mkdoc.py", "Absolute path to script mkdoc.py")
+	tpath := flag.String("tp", "~/git/europrotocoltgbot/python/bin", "Absolute path to dir with python tmp files")
 	flag.Parse()
 
 	var args string
@@ -52,5 +56,7 @@ func NewConfig() Config {
 		Mode:       *mode,
 		ConfigFile: *cf,
 		DBConfig:   dbConfig,
+		ScriptPath: *dpath,
+		BinPath:    *tpath,
 	}
 }
