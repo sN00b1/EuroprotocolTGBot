@@ -5,6 +5,9 @@ import (
 	"EuroprotocolTGBot/internal/loggin"
 	"EuroprotocolTGBot/internal/storage"
 	"EuroprotocolTGBot/internal/tools"
+	"os"
+	"os/exec"
+	"strconv"
 	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -109,17 +112,9 @@ func (bot *Bot) Handle(update tgbotapi.Update) {
 	case "/start":
 		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Привет! Я ваш Telegram-бот по заполнению европротоклов при ДТП. Напишите /help для просмотра всех команд.")
 	case "/help":
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID,
-			`Я могу помочь с основными вопросами. 
-		Напишите /new для создания нового протокола, 
-		/list для ппросмотра списка своих протоколов,
-		/new_on для создания протокола на основе существующего протокола,
-		/edit для редактирования проткола из списка
-		/print для печати европротокола.`)
+		msg = bot.HelpHandler(id, update)
 	case "/new":
-		bot.chain[id].Reset()
-		ask, _ := bot.chain[id].GetCurrentAsk()
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+		msg = bot.NewHandler(id, update)
 	case "/list":
 		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
 	case "/new_on":
@@ -127,20 +122,83 @@ func (bot *Bot) Handle(update tgbotapi.Update) {
 	case "/edit":
 		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
 	case "/print":
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, bot.PrintAnswer(id))
+		msg = bot.PrintHandler(id, update)
 	default:
-		if bot.chain[id].Start {
-			bot.chain[id].SetCurrentAnswer(update.Message.Text)
-			ask, ok := bot.chain[id].GetCurrentAsk()
-			if ok {
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
-			} else {
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Заполнение протокола завершено. Можете его распечатать командой /print.")
-			}
-		} else {
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваше сообщение не ясно. Воспользуйтесь /help.")
-		}
+		msg = bot.DefualtHandler(id, update)
 	}
 
 	bot.Bot.Send(msg)
+}
+
+func (bot *Bot) DefualtHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+	var msg tgbotapi.MessageConfig
+	if bot.chain[id].Start {
+		bot.chain[id].SetCurrentAnswer(update.Message.Text)
+		ask, ok := bot.chain[id].GetCurrentAsk()
+		if ok {
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+		} else {
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Заполнение протокола завершено. Можете его распечатать командой /print.")
+		}
+	} else {
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваше сообщение не ясно. Воспользуйтесь /help.")
+	}
+	return msg
+}
+
+func (bot *Bot) HelpHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+	return tgbotapi.NewMessage(update.Message.Chat.ID,
+		`Я могу помочь с основными вопросами. 
+	Напишите /new для создания нового протокола, 
+	/list для ппросмотра списка своих протоколов,
+	/new_on для создания протокола на основе существующего протокола,
+	/edit для редактирования проткола из списка
+	/print для печати европротокола.`)
+}
+
+func (bot *Bot) NewHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+	bot.chain[id].Reset()
+	ask, _ := bot.chain[id].GetCurrentAsk()
+	return tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+}
+
+func (bot *Bot) PrintHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+	var msg tgbotapi.MessageConfig
+
+	outJsonFP := bot.cfg.BinPath + "/" + strconv.FormatInt(update.Message.Chat.ID, 10) + ".json"
+	docxFile := bot.cfg.BinPath + "/" + strconv.FormatInt(update.Message.Chat.ID, 10) + ".docx"
+
+	err := bot.chain[id].PrintAnswer(outJsonFP)
+	if err != nil {
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ошибка создания протокола. Данные инцедента отправлены администратору.")
+		return msg
+	}
+
+	// Запуск Python скрипта с параметрами
+	cmd := exec.Command("/usr/bin/python3", bot.cfg.ScriptPath, outJsonFP, docxFile)
+
+	// Получение вывода
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		loggin.Log.Error("PrintHandler:", zap.String("Ошибка запуска скрипта", err.Error()))
+	}
+
+	loggin.Log.Info("PrintHandler: ", zap.String("mkdoc.py output:", string(out)))
+
+	filePath := docxFile
+
+	fileBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		loggin.Log.Error("PrintHandler:", zap.String("Ошибка чтения файла, полученного от скрипта.", err.Error()))
+	}
+	docxFileBytes := tgbotapi.FileBytes{
+		Name:  "Европротокол.docx",
+		Bytes: fileBytes,
+	}
+
+	bot.Bot.Send(tgbotapi.NewDocument(id, docxFileBytes))
+
+	msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваш европротокол успешно сгенерирован.")
+
+	return msg
 }

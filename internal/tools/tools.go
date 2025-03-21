@@ -51,6 +51,10 @@ func (chain *MsgChain) LoadAsks(file string) error {
 		return err
 	}
 
+	for _, v := range texts {
+		chain.AskList[v.ID] = v
+	}
+
 	return nil
 }
 

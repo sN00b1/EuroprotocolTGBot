@@ -21,7 +21,7 @@ type Config struct {
 func NewConfig() Config {
 	key := flag.String("k", "", "Telegram API token")
 	mode := flag.String("m", "Debug", "Mode for loggin. Should be Zap like debug mode")
-	cf := flag.String("f", "Asks.json", "Name of config file with answers in json format")
+	cf := flag.String("f", "/home/val/Documents/Asks.json", "Name of config file with answers in json format")
 	host := flag.String("dbh", "localhost", "IP adress of postgresql Database")
 	port := flag.String("dbp", "5432", "Port for postgresql databese connection")
 	user := flag.String("dbu", "postgres", "User for postgresql database")
@@ -29,8 +29,8 @@ func NewConfig() Config {
 	name := flag.String("dbn", "europrotocol", "Database name for postgresql")
 	ocon := flag.Int("dbo", 300, "Maximum opened connections for postgresql database")
 	icon := flag.Int("dbi", 150, "Maximum idle connections for postgresql database")
-	dpath := flag.String("sp", "~/git/europrotocoltgbot/python/mkdoc.py", "Absolute path to script mkdoc.py")
-	tpath := flag.String("tp", "~/git/europrotocoltgbot/python/bin", "Absolute path to dir with python tmp files")
+	spath := flag.String("sp", "/home/val/git/europrotocoltgbot/python/mkdoc.py", "Absolute path to script mkdoc.py")
+	tpath := flag.String("tp", "/home/val/git/europrotocoltgbot/python/bin", "Absolute path to dir with python tmp files")
 	flag.Parse()
 
 	var args string
@@ -56,7 +56,7 @@ func NewConfig() Config {
 		Mode:       *mode,
 		ConfigFile: *cf,
 		DBConfig:   dbConfig,
-		ScriptPath: *dpath,
+		ScriptPath: *spath,
 		BinPath:    *tpath,
 	}
 }

@@ -29,7 +29,7 @@ def filling_doc(input_file, output_file):
     # Создаем словарь для подстановки
     context = {}
     for item in data:
-        context[item['id']] = item['text']
+        context[data[item]['id']] = data[item]['text']
 
     # Заполняем шаблон и сохраняем документ
     try:
