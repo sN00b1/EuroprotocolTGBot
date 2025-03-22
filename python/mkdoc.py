@@ -16,7 +16,7 @@ def filling_doc(input_file, output_file):
     locale.setlocale(locale.LC_ALL, '')
     
     # Загружаем шаблон документа
-    doc = DocxTemplate("template.docx")
+    doc = DocxTemplate("/home/val/git/EuroprotocolTGBot/python/templete.docx")
     
     # Загружаем все данные из JSON файла
     try:
@@ -29,12 +29,12 @@ def filling_doc(input_file, output_file):
     # Создаем словарь для подстановки
     context = {}
     for item in data:
-        context[data[item]['id']] = data[item]['text']
+        context[str('ref')+str(data[item]['id'])] = data[item]['text']
 
     # Заполняем шаблон и сохраняем документ
     try:
         doc.render(context)
-        doc.save(os.path.join(os.getcwd(), output_file))
+        doc.save(output_file)
     except Exception as e:
         print(f"Ошибка при создании документа: {str(e)}")
 

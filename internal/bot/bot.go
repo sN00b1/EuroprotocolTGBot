@@ -20,7 +20,7 @@ var FatherChan tools.MsgChain
 type Bot struct {
 	Bot   *tgbotapi.BotAPI
 	cfg   config.Config
-	chain map[int64]*tools.MsgChain
+	chain map[string]*tools.MsgChain
 	db    *storage.DBStorage
 	mux   sync.RWMutex
 }
@@ -49,7 +49,7 @@ func NewBot(cfg config.Config) (*Bot, error) {
 		return &Bot{
 			Bot:   bot,
 			cfg:   cfg,
-			chain: make(map[int64]*tools.MsgChain),
+			chain: make(map[string]*tools.MsgChain),
 			db:    db,
 		}, err
 	}
@@ -57,20 +57,20 @@ func NewBot(cfg config.Config) (*Bot, error) {
 	return &Bot{
 		Bot:   bot,
 		cfg:   cfg,
-		chain: make(map[int64]*tools.MsgChain),
+		chain: make(map[string]*tools.MsgChain),
 		db:    db,
 	}, nil
 }
 
 // функция асинхронного добавления пользовательской сессии
-func (bot *Bot) AddChain(id int64, chain tools.MsgChain) {
+func (bot *Bot) AddChain(id string, chain tools.MsgChain) {
 	bot.mux.Lock()
 	bot.chain[id] = &chain
 	bot.mux.Unlock()
 }
 
 // функция получения данных из пользовательской сессии
-func (bot *Bot) PrintAnswer(id int64) string {
+func (bot *Bot) PrintAnswer(id string) string {
 	var result []rune
 
 	bot.mux.RLock()
@@ -94,44 +94,88 @@ func (bot *Bot) Run() {
 	updates := bot.Bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message != nil {
+		if update.Message != nil || update.CallbackQuery != nil {
 			go bot.Handle(update)
 		}
 	}
 }
 
 func (bot *Bot) Handle(update tgbotapi.Update) {
-	id := update.Message.From.ID
+	var id string
+	var msg tgbotapi.MessageConfig
+
+	id = update.FromChat().UserName
+
 	_, ok := bot.chain[id]
 	if !ok {
 		bot.AddChain(id, FatherChan)
 	}
 
-	var msg tgbotapi.MessageConfig
-	switch update.Message.Text {
-	case "/start":
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Привет! Я ваш Telegram-бот по заполнению европротоклов при ДТП. Напишите /help для просмотра всех команд.")
-	case "/help":
-		msg = bot.HelpHandler(id, update)
-	case "/new":
-		msg = bot.NewHandler(id, update)
-	case "/list":
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
-	case "/new_on":
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
-	case "/edit":
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
-	case "/print":
-		msg = bot.PrintHandler(id, update)
-	default:
-		msg = bot.DefualtHandler(id, update)
+	if update.Message != nil {
+		switch update.Message.Text {
+		case "/start":
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Привет! Я ваш Telegram-бот по заполнению европротоклов при ДТП. Напишите /help для просмотра всех команд.")
+		case "/help":
+			msg = bot.HelpHandler(id, update)
+		case "/new":
+			msg = bot.NewHandler(id, update)
+		case "/list":
+			msg = DevelopmentHandler(update)
+		case "/new_on":
+			msg = DevelopmentHandler(update)
+		case "/edit":
+			msg = DevelopmentHandler(update)
+		case "/print":
+			msg = bot.PrintHandler(id, update)
+		default:
+			msg = bot.DefualtHandler(id, update)
+		}
+	}
+
+	// Обработка нажатий кнопок
+	if update.CallbackQuery != nil {
+		callback := update.CallbackQuery
+		switch callback.Data {
+		case "next":
+			bot.chain[id].Next()
+			ask, _ := bot.chain[id].GetCurrentAsk()
+			msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, ask.Text)
+			msg.ReplyMarkup = GetNaviKeyBoard() // используем ту же клавиатуру
+		case "back":
+			bot.chain[id].Back()
+			ask, _ := bot.chain[id].GetCurrentAsk()
+			msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, ask.Text)
+			msg.ReplyMarkup = GetNaviKeyBoard()
+		case "cancel":
+			bot.chain[id].Reset()
+			msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Заполнение протокола отменено. Воспользутесь /help.")
+		}
 	}
 
 	bot.Bot.Send(msg)
 }
 
-func (bot *Bot) DefualtHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+func DevelopmentHandler(update tgbotapi.Update) tgbotapi.MessageConfig {
+	return tgbotapi.NewMessage(update.Message.Chat.ID, "Данная функция находится в разработке.")
+}
+
+func GetNaviKeyBoard() tgbotapi.InlineKeyboardMarkup {
+	// Создаем клавиатуру с кнопками
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "back"),
+			tgbotapi.NewInlineKeyboardButtonData("Далее ➡", "next"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Отменить", "cancel"),
+		),
+	)
+	return keyboard
+}
+
+func (bot *Bot) DefualtHandler(id string, update tgbotapi.Update) tgbotapi.MessageConfig {
 	var msg tgbotapi.MessageConfig
+
 	if bot.chain[id].Start {
 		bot.chain[id].SetCurrentAnswer(update.Message.Text)
 		ask, ok := bot.chain[id].GetCurrentAsk()
@@ -140,13 +184,14 @@ func (bot *Bot) DefualtHandler(id int64, update tgbotapi.Update) tgbotapi.Messag
 		} else {
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Заполнение протокола завершено. Можете его распечатать командой /print.")
 		}
+		msg.ReplyMarkup = GetNaviKeyBoard()
 	} else {
 		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваше сообщение не ясно. Воспользуйтесь /help.")
 	}
 	return msg
 }
 
-func (bot *Bot) HelpHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+func (bot *Bot) HelpHandler(id string, update tgbotapi.Update) tgbotapi.MessageConfig {
 	return tgbotapi.NewMessage(update.Message.Chat.ID,
 		`Я могу помочь с основными вопросами. 
 	Напишите /new для создания нового протокола, 
@@ -156,13 +201,17 @@ func (bot *Bot) HelpHandler(id int64, update tgbotapi.Update) tgbotapi.MessageCo
 	/print для печати европротокола.`)
 }
 
-func (bot *Bot) NewHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+func (bot *Bot) NewHandler(id string, update tgbotapi.Update) tgbotapi.MessageConfig {
 	bot.chain[id].Reset()
 	ask, _ := bot.chain[id].GetCurrentAsk()
-	return tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, ask.Text)
+	msg.ReplyMarkup = GetNaviKeyBoard()
+
+	return msg
 }
 
-func (bot *Bot) PrintHandler(id int64, update tgbotapi.Update) tgbotapi.MessageConfig {
+func (bot *Bot) PrintHandler(id string, update tgbotapi.Update) tgbotapi.MessageConfig {
 	var msg tgbotapi.MessageConfig
 
 	outJsonFP := bot.cfg.BinPath + "/" + strconv.FormatInt(update.Message.Chat.ID, 10) + ".json"
@@ -196,7 +245,7 @@ func (bot *Bot) PrintHandler(id int64, update tgbotapi.Update) tgbotapi.MessageC
 		Bytes: fileBytes,
 	}
 
-	bot.Bot.Send(tgbotapi.NewDocument(id, docxFileBytes))
+	bot.Bot.Send(tgbotapi.NewDocument(update.Message.Chat.ID, docxFileBytes))
 
 	msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваш европротокол успешно сгенерирован.")
 

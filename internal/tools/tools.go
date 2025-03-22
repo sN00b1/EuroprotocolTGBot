@@ -4,7 +4,6 @@ import (
 	"EuroprotocolTGBot/internal/loggin"
 	"encoding/json"
 	"os"
-	"strconv"
 
 	"go.uber.org/zap"
 )
@@ -62,7 +61,6 @@ func (chain *MsgChain) LoadAsks(file string) error {
 func (chain *MsgChain) GetCurrentAsk() (TextWithID, bool) {
 	chain.Start = true
 	v, ok := chain.AskList[chain.CurrID]
-	loggin.Log.Info("AskList LEN", zap.String("", strconv.Itoa(len(chain.AskList))))
 	return v, ok
 }
 
@@ -113,4 +111,18 @@ func (chain *MsgChain) PrintAnswer(filePath string) error {
 		return err
 	}
 	return nil
+}
+
+func (chain *MsgChain) Next() {
+	chain.CurrID = (chain.CurrID + len(chain.AskList) + 1) % len(chain.AskList)
+	if chain.CurrID <= 0 {
+		chain.CurrID = 1
+	}
+}
+
+func (chain *MsgChain) Back() {
+	chain.CurrID = (chain.CurrID + len(chain.AskList) - 1) % len(chain.AskList)
+	if chain.CurrID <= 0 {
+		chain.CurrID = len(chain.AskList)
+	}
 }
